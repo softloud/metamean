@@ -23,8 +23,7 @@ library(tidyverse)
 
 - Referencing
 - Import Hozo estimator
-- Graphed the relative error vs sample size. (Here I'm assuming that by relative error, they mean $\frac {\widehat\mu - \mu} \mu$ - or is it $\frac {\mu - \widehat\mu} \mu$?) - Investigate.
-
+- Graphed the relative error vs sample size. (Here I'm assuming that by relative error, they mean $\frac {\widehat\mu - \mu} \mu$ - or is it $\frac {\mu - \widehat\mu} \mu$?) - Investigate. Could be absolute value, too. 
 
 # Objective
 
@@ -52,8 +51,8 @@ We want to replicate the simulations presented in Hozo et al.'s paper.
 # Generate data
 
 I'll use some functions from my helper functions package `dontpanic`. 
-```{r Get samples}
-hozo_sim <- cross(list(dist = list( # I love this function.
+```{r}
+hozo_sim <- tibble(dist = list( # I love this function.
   list(rdist = "norm",
        rpars = list(mean = 50, sd = 17)),
   list(rdist = "lnorm",
@@ -64,15 +63,49 @@ hozo_sim <- cross(list(dist = list( # I love this function.
        rpars = 10),
   list(rdist = "weibull",
        rpars = c(2, 35))
-),
-n = seq(1, 10, by = 2)))
+)) %>% 
+  mutate( # Calculate true mean and sd.
+    true_mean = map2_dbl(
+      map_chr(dist, "rdist"),
+      map(dist, "rpars"),
+      .f = dontpanic::get_mean
+    ),
+    true_sd = pmap_dbl(
+      list(
+      map_chr(dist, "rdist"),
+      map(dist, "rpars"),
+      true_mean
+      ),
+      .f = dontpanic::get_sd
+    ),
+    rdist = map_chr(dist, "rdist"),
+    rpars = map(dist, "rpars")
+  ) %>% 
+  select(-dist) %>% 
+  mutate(
+    sim_pars = pmap(list(rdist, rpars, true_mean, true_sd), list)
+  ) %>% 
+  select(sim_pars)
+  
+```
+
+## Get samples 
+
+```{r Get samples}
+
+hozo_sim <- cross(
+  list(sim_pars = hozo_sim$sim_pars,
+       n = seq(1, 12, by = 2))
+)
 
 # Convert to tibble.
 hozo_sim <- tibble(
-  rdist = map_chr(hozo_sim, c("dist", "rdist")),
-  rpars = map(hozo_sim, c("dist", "rpars")),
+  rdist = map_chr(hozo_sim, c(1,1)),
+  rpars = map(hozo_sim, c(1,2)),
+  true_mean = map_dbl(hozo_sim, c(1,3)),
+  true_sd = map_dbl(hozo_sim, c(1, 4)),
   n = map_dbl(hozo_sim, "n")
-)  %>% # Generate sampes from parameters.
+)  %>% # Generate samples from parameters.
   mutate(sample = pmap(list(n = n, dist = rdist, par = rpars), 
                        dontpanic::get_sample)) %>% 
   mutate( # Calculate summary statistics.
@@ -87,7 +120,7 @@ hozo_sim <- tibble(
   # Not sure I need parameters as variables.
   # mutate(
   #   rpar1 = map_dbl(rpars, 1),
-  #   rpar2 = map_dbl(rpars, 2, .default = NA)
+  #   rpar2 = map_dbl(rpars, 2, .default = NA) 
   # ) 
 
 # Take a look.
@@ -95,4 +128,15 @@ hozo_sim %>% listviewer::jsonedit()
 
 ```
 
+## Apply estimators
+
+```{r Estimators}
+hozo_sim <- hozo_sim %>% 
+  mutate(
+    ran_4 = (max - min) / 4, 
+    ran_6 = (max - min) / 6
+  ) 
+
+
+```
 
