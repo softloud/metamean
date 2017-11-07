@@ -1,0 +1,9 @@
+Package: metamean
+Title: Estimate the Sample Mean and Standard Deviation from Limited Information
+Version: 0.0.0.9000
+Authors@R: person("Charles", "Gray", email = "C.Gray@latrobe.edu.au", role = c("aut", "cre"))
+Description: Provided with the sample size, the sample median, and the interquartile range or range, these functions are estimators from ToDo: chase down referencing.
+Depends: R (>= 3.4.2)
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
