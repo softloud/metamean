@@ -1,0 +1,98 @@
+<!-- 
+%\VignetteEngine{knitr}
+%\VignetteIndexEntry{Single study data} 
+-->
+---
+title: "Hozo et al. Replication"
+author: "Charles T. Gray"
+date: `r dontpanic::title_date()`
+vignette: >
+  %\VignetteIndexEntry{Hozo replication}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+dontpanic::nix()
+library(tidyverse)
+
+```
+
+# Tasks
+
+- Referencing
+- Import Hozo estimator
+- Graphed the relative error vs sample size. (Here I'm assuming that by relative error, they mean $\frac {\widehat\mu - \mu} \mu$ - or is it $\frac {\mu - \widehat\mu} \mu$?) - Investigate.
+
+
+# Objective
+
+We want to replicate the simulations presented in Hozo et al.'s paper. 
+
+# Theoretically, what did they do?
+
+- Drew 200 samples of sizes ranging from 8 to 100. (*From memory, I think they increase in increments of 2.*)
+- N$(50, 17^2)$, LN$(4, 0.3)$, Beta$(9,4)$, Exp$(10)$, Weibull$(2, 35)$.
+- Graphed the relative error vs sample size. (Here I'm assuming that by relative error, they mean $\frac {\widehat\mu - \mu} \mu$ - or is it $\frac {\mu - \widehat\mu} \mu$? It could even be absolute, will need to check.)
+
+# Estimators
+
+## For the sample mean
+
+- Equation (5)
+- Median
+
+## For the sample standard deviation
+
+- Equation (16)
+- range$/4$
+- range$/6$
+
+# Generate data
+
+I'll use some functions from my helper functions package `dontpanic`. 
+```{r Get samples}
+hozo_sim <- cross(list(dist = list( # I love this function.
+  list(rdist = "norm",
+       rpars = list(mean = 50, sd = 17)),
+  list(rdist = "lnorm",
+       rpars = list(meanlog = 4, meansd = 0.3)),
+  list(rdist = "beta",
+       rpars = list(9, 4)),
+  list(rdist = "exp",
+       rpars = 10),
+  list(rdist = "weibull",
+       rpars = c(2, 35))
+),
+n = seq(1, 10, by = 2)))
+
+# Convert to tibble.
+hozo_sim <- tibble(
+  rdist = map_chr(hozo_sim, c("dist", "rdist")),
+  rpars = map(hozo_sim, c("dist", "rpars")),
+  n = map_dbl(hozo_sim, "n")
+)  %>% # Generate sampes from parameters.
+  mutate(sample = pmap(list(n = n, dist = rdist, par = rpars), 
+                       dontpanic::get_sample)) %>% 
+  mutate( # Calculate summary statistics.
+    min = map_dbl(sample, min),
+    first_q = map_dbl(sample, quantile, p = 0.25),
+    median = map_dbl(sample, median),
+    third_q = map_dbl(sample, quantile, p = 0.75),
+    max = map_dbl(sample, max)
+  )
+
+
+  # Not sure I need parameters as variables.
+  # mutate(
+  #   rpar1 = map_dbl(rpars, 1),
+  #   rpar2 = map_dbl(rpars, 2, .default = NA)
+  # ) 
+
+# Take a look.
+hozo_sim %>% listviewer::jsonedit()
+
+```
+
+
