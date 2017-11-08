@@ -99,7 +99,7 @@ hozo_sim <- tibble(dist = list( # I love this function.
 hozo_sim <- cross(
   list(sim_pars = hozo_sim$sim_pars,
        n = seq(8, 100, by = 2),
-       sim_index = seq(1, 100))
+       sim_index = seq(1, 200))
 )
 
 # Convert to tibble.
