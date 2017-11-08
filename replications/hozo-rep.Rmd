@@ -14,8 +14,10 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-dontpanic::nix()
+rm(list = ls(all = TRUE))
+
 library(tidyverse)
+library(metamean)
 
 ```
 
@@ -95,7 +97,7 @@ hozo_sim <- tibble(dist = list( # I love this function.
 
 hozo_sim <- cross(
   list(sim_pars = hozo_sim$sim_pars,
-       n = seq(1, 12, by = 2))
+       n = seq(3, 12, by = 2))
 )
 
 # Convert to tibble.
@@ -133,10 +135,72 @@ hozo_sim %>% listviewer::jsonedit()
 ```{r Estimators}
 hozo_sim <- hozo_sim %>% 
   mutate(
+    mean_hozo_5 = pmap_dbl(list(
+      min, 
+      median, 
+      max
+    ),
+    hozo_5),
+    sd_hozo_16 = pmap_dbl(list(
+      min, 
+      median, 
+      max
+    ),
+    hozo_16),
     ran_4 = (max - min) / 4, 
     ran_6 = (max - min) / 6
   ) 
 
 
 ```
+
+### Bundle estimators into lists for long form
+
+```{r Bundle estimators}
+# Hmmm not sure this is necessary, after all. Can split them into 
+# two simulations now.
+# 
+# hozo_sim <- hozo_sim %>% # Prepare to gather.
+#   mutate(
+#     mean_ests = map2(
+#       median,
+#       mean_hozo_5,
+#       .f = function(x, y) {
+#         tibble(median = x,
+#                hozo_5 = y)
+#       }
+#     ),
+#     sd_ests = pmap(
+#       list(ran_4,
+#            ran_6,
+#            sd_hozo_16),
+#       .f = function(x, y, z) {
+#         tibble(ran_4 = x,
+#                ran_6 = y,
+#                hozo_16 = z)
+#       }
+#     )
+#   ) 
+
+```
+
+### Long form
+
+```{r Long form}
+hozo_means <- hozo_sim %>% 
+  select(n, rdist, rpars, true_mean, true_sd, median, mean_hozo_5) %>% 
+  gather(key = "estimator",
+         value = "estimate",
+         median, mean_hozo_5) %>% 
+  mutate(rel_err = (estimate - true_mean) / true_mean)
+  
+hozo_sds <- hozo_sim %>% 
+  select(n, rdist, rpars, true_mean, true_sd, ran_4, ran_6, sd_hozo_16) %>% 
+  gather(key = "estimator",
+         value = "estimate",
+         ran_4, ran_6, sd_hozo_16)
+
+```
+
+# Plots
 
