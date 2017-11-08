@@ -26,6 +26,7 @@ library(metamean)
 - Referencing
 - Import Hozo estimator
 - Graphed the relative error vs sample size. (Here I'm assuming that by relative error, they mean $\frac {\widehat\mu - \mu} \mu$ - or is it $\frac {\mu - \widehat\mu} \mu$?) - Investigate. Could be absolute value, too. 
+- Dig out how to put maths into axes - needed for plots, best to use maths to explain relative error.
 
 # Objective
 
@@ -97,7 +98,8 @@ hozo_sim <- tibble(dist = list( # I love this function.
 
 hozo_sim <- cross(
   list(sim_pars = hozo_sim$sim_pars,
-       n = seq(3, 12, by = 2))
+       n = seq(8, 100, by = 2),
+       sim_index = seq(1, 100))
 )
 
 # Convert to tibble.
@@ -198,9 +200,49 @@ hozo_sds <- hozo_sim %>%
   select(n, rdist, rpars, true_mean, true_sd, ran_4, ran_6, sd_hozo_16) %>% 
   gather(key = "estimator",
          value = "estimate",
-         ran_4, ran_6, sd_hozo_16)
+         ran_4, ran_6, sd_hozo_16) %>% 
+  mutate(rel_err = (estimate - true_sd) / true_sd)
 
 ```
 
+# Summarise
+
+```{r Summarise}
+hozo_mean_results <- hozo_means %>%
+  group_by(n, rdist, estimator) %>%
+  summarise(rel_err = mean(rel_err))
+
+hozo_sd_results <- hozo_sds %>%
+  group_by(n, rdist, estimator) %>%
+  summarise(rel_err = mean(rel_err))
+
+```
+
+
 # Plots
+
+```{r Plot}
+hozo_mean_results %>% 
+  group_by(estimator) %>% 
+  ggplot(aes(x = n, y = rel_err)) +
+  geom_line(aes(colour = estimator)) +
+  geom_point(aes(colour = estimator)) +
+  facet_grid(rdist ~ .,
+             scales = "free_y") +
+  labs(title = "Comparison of precision of estimators for sample mean",
+       x = "Sample size",
+       y = "Mean relative error")
+
+hozo_sd_results %>% 
+  group_by(estimator) %>% 
+  ggplot(aes(x = n, y = rel_err)) +
+  geom_line(aes(colour = estimator)) +
+  geom_point(aes(colour = estimator)) +
+  facet_grid(rdist ~ .,
+             scales = "free_y") +
+  labs(title = "Comparison of precision of estimators for sample standard deviation",
+       x = "Sample size",
+       y = "Mean relative error")
+
+```
 
