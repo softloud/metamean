@@ -1,0 +1,100 @@
+---
+title: "Other methods coverage"
+author: "Trouble"
+date: "11/11/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list = ls())
+
+library(tidyverse)
+
+```
+
+
+# Tasks
+
+- ~~Load data from my `metamedian` package.~~
+- ~~Calculate estimates of the mean and standard deviation using the various estimators.~~
+- Convert to longform. 
+- Calculate confidence intervals.
+- Calculate absolute relative bias.
+- Calculate relative interval width. 
+- Consider results; do I need to check the estimator functions carefully?
+- Wasn't there some horrible issue with the medians?
+
+# Objective
+
+Reproduce the coverage probabiltiy plots. 
+
+# Simulation
+
+```{r Get data}
+om_sim <- metamedian::ss_data %>% # Load data from metamedian pkg.
+  mutate( # Now for the estimates.
+    hozo_effects = map(
+      sample_stats_1,
+      .f = function(summary_tibble) {
+        metamean::eff_est_hozo(
+          a = summary_tibble$min,
+          m = summary_tibble$median,
+          b = summary_tibble$max,
+          n = summary_tibble$n
+        )
+      }
+    ),
+    bland_effects = map(
+      sample_stats_1,
+      .f = function(summary_tibble) {
+        metamean::eff_est_bland(
+          a = summary_tibble$min,
+          q.1 = summary_tibble$first_q,
+          m = summary_tibble$median,
+          q.3 = summary_tibble$third_q,
+          b = summary_tibble$max,
+          n = summary_tibble$n
+        )
+      }
+    ),
+    wan_effects_c1 = map(
+      sample_stats_1,
+      .f = function(summary_tibble) {
+        metamean::eff_est_wan_c1(
+          a = summary_tibble$min,
+          m = summary_tibble$median,
+          b = summary_tibble$max,
+          n = summary_tibble$n
+        )
+      }
+    ),
+    wan_effects_c2 = map(
+      sample_stats_1,
+      .f = function(summary_tibble) {
+        metamean::eff_est_wan_c2(
+          a = summary_tibble$min,
+          q.1 = summary_tibble$first_q,
+          m = summary_tibble$median,
+          q.3 = summary_tibble$third_q,
+          b = summary_tibble$max,
+          n = summary_tibble$n
+        )
+      }
+    ),
+    wan_effects_c3 = map(
+      sample_stats_1,
+      .f = function(summary_tibble) {
+        metamean::eff_est_wan_c3(
+          q.1 = summary_tibble$first_q,
+          m = summary_tibble$median,
+          q.3 = summary_tibble$third_q,
+          n = summary_tibble$n
+        )
+      }
+    )
+  )
+
+```
+
