@@ -135,6 +135,9 @@ $(document).ready(function () {
 <li>Calculate relative interval width.</li>
 <li>Consider results; do I need to check the estimator functions carefully?</li>
 <li>Wasn’t there some horrible issue with the medians?</li>
+<li>Calculate absolute bias to compare relative absolute bias.</li>
+<li>Rotate <span class="math inline">\(x\)</span>-axis.</li>
+<li>Change legend names to mathematics.</li>
 </ul>
 </div>
 <div id="objective" class="section level1">
@@ -144,8 +147,9 @@ $(document).ready(function () {
 <div id="simulation" class="section level1">
 <h1>Simulation</h1>
 <pre class="r"><code>om_sim &lt;- metamedian::ss_data %&gt;% # Load data from metamedian pkg.
+  filter(arm_adj == &quot;sample_stats_2_null&quot;) %&gt;%
   mutate( # Now for the estimates.
-    hozo_effects = map(
+    hozo = map(
       sample_stats_1,
       .f = function(summary_tibble) {
         metamean::eff_est_hozo(
@@ -156,7 +160,7 @@ $(document).ready(function () {
         )
       }
     ),
-    bland_effects = map(
+    bland = map(
       sample_stats_1,
       .f = function(summary_tibble) {
         metamean::eff_est_bland(
@@ -169,7 +173,7 @@ $(document).ready(function () {
         )
       }
     ),
-    wan_effects_c1 = map(
+    wan_c1 = map(
       sample_stats_1,
       .f = function(summary_tibble) {
         metamean::eff_est_wan_c1(
@@ -180,7 +184,7 @@ $(document).ready(function () {
         )
       }
     ),
-    wan_effects_c2 = map(
+    wan_c2 = map(
       sample_stats_1,
       .f = function(summary_tibble) {
         metamean::eff_est_wan_c2(
@@ -193,7 +197,7 @@ $(document).ready(function () {
         )
       }
     ),
-    wan_effects_c3 = map(
+    wan_c3 = map(
       sample_stats_1,
       .f = function(summary_tibble) {
         metamean::eff_est_wan_c3(
@@ -205,6 +209,45 @@ $(document).ready(function () {
       }
     )
   )</code></pre>
+<pre class="r"><code>om_sim &lt;- om_sim %&gt;% 
+  gather(key = &quot;method&quot;,
+         value = &quot;effects&quot;,
+         hozo, bland, wan_c1, wan_c2, wan_c3)</code></pre>
+<pre class="r"><code>om_sim &lt;- om_sim %&gt;%
+  mutate(
+    ci_lb = map_dbl(effects, &quot;centre&quot;) - qnorm(0.975) * map_dbl(effects, &quot;se&quot;),
+    ci_ub = map_dbl(effects, &quot;centre&quot;) + qnorm(0.975) * map_dbl(effects, &quot;se&quot;),
+    true_in = pmap_lgl(
+      .l = list(lb =
+                  ci_lb,
+                ub = ci_ub,
+                true_mean = true_mean),
+      .f = function(lb, ub, true_mean) {
+        lb &lt; true_mean &amp; true_mean &lt; ub
+      }
+    ),
+    relative_interval_width = (ci_ub - ci_lb) / true_mean,
+    relative_absolute_bias = abs(true_mean -
+                                   map_dbl(effects,
+                                           &quot;centre&quot;) /  true_mean)
+  )</code></pre>
+<pre class="r"><code>om_means &lt;- om_sim %&gt;%
+  group_by(n, rdist, rpar1, method) %&gt;%
+  summarise(
+    ci_lb = mean(ci_lb),
+    ci_ub = mean(ci_ub),
+    coverage = sum(true_in) / metamedian::ss_par[[2]],
+    relative_interval_width = mean(relative_interval_width),
+    relative_absolute_bias = mean(relative_absolute_bias)
+  )</code></pre>
+<pre class="r"><code>cov_dist &lt;- om_means %&gt;%
+  ggplot(aes(x = rdist,
+             y = coverage)) +
+  geom_point(aes(colour = relative_absolute_bias,
+                 size = relative_interval_width)) +
+  facet_grid(n ~ method)</code></pre>
+<pre class="r"><code>devtools::use_data(cov_dist, overwrite = T)</code></pre>
+<pre><code>## Saving cov_dist as cov_dist.rda to /Users/puzzlebox/Documents/metamean/data</code></pre>
 </div>
 
 
